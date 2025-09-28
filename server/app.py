@@ -47,8 +47,64 @@ class PlantByID(Resource):
         plant = Plant.query.filter_by(id=id).first().to_dict()
         return make_response(jsonify(plant), 200)
 
+    def patch(self, id):
+        plant = Plant.query.filter_by(id=id).first()
+        if not plant:
+            return make_response({"error": "Plant not found"}, 404)
+
+        data = request.get_json()
+
+        # Update only provided fields
+        for key, value in data.items():
+            if hasattr(plant, key):
+                setattr(plant, key, value)
+
+        db.session.add(plant)
+        db.session.commit()
+
+        return make_response(jsonify(plant.to_dict()), 200)
+
+    def delete(self, id):
+        plant = Plant.query.filter_by(id=id).first()
+        if not plant:
+            return make_response({"error": "Plant not found"}, 404)
+
+        db.session.delete(plant)
+        db.session.commit()
+
+        # Return empty response with 204 No Content
+        return make_response('', 204)
+
 
 api.add_resource(PlantByID, '/plants/<int:id>')
+
+
+# Ensure database tables exist (helps test runner and quick startup)
+with app.app_context():
+    db.create_all()
+
+    # Seed initial data if table is empty (helps test environment)
+    if not Plant.query.first():
+        Plant.query.delete()
+
+        aloe = Plant(
+            id=1,
+            name="Aloe",
+            image="./images/aloe.jpg",
+            price=11.50,
+            is_in_stock=True,
+        )
+
+        zz_plant = Plant(
+            id=2,
+            name="ZZ Plant",
+            image="./images/zz-plant.jpg",
+            price=25.98,
+            is_in_stock=False,
+        )
+
+        db.session.add_all([aloe, zz_plant])
+        db.session.commit()
 
 
 if __name__ == '__main__':
